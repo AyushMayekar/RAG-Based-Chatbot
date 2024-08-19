@@ -42,16 +42,9 @@ if the answer cannot be found in the context provided, design every response in 
 Question : {input}
 """)
 
-# Initializing retrieval chain
+# Initializing retrieval chain and vector store
 retrieval_chain = None
-
-# Initializing a flag
-# Check if embeddings already exist in MongoDB
-if atlas_collection.count_documents({}) > 0:  # Adjust this condition based on your collection structure
-    loaded_embeddings = True
-    print("Embeddings already loaded in MongoDB.")
-else:    
-    loaded_emebeddings = False
+vector_store = None
 
 # Function to load,split and embed the document
 def load_embeddings():
@@ -67,31 +60,46 @@ def load_embeddings():
     embeddings = OllamaEmbeddings(model='nomic-embed-text')
 
     # Creating a vector store form MongoDB Atlas
+    global vector_store
     vector_store = MongoDBAtlasVectorSearch.from_documents(documents = split_docs,
                                                         embedding = embeddings,
                                                         collection = atlas_collection,
                                                         index_name = vector_search_index)
-        
-
-    # Creating a document chain
-    global llm, Prompt
-    doc_chain = create_stuff_documents_chain(llm = llm, prompt = Prompt, output_parser= StrOutputParser())
-
-    # Defining the vector store as retriever
-    retriever = vector_store.as_retriever( search_type = "similarity",
-    search_kwargs = { "k": 10 })
-
-    # Creating a retrieval chain
-    global retrieval_chain
-    retrieval_chain = create_retrieval_chain(retriever, doc_chain)
 
     # Updating the flag
-    global loaded_emebeddings
-    loaded_emebeddings = True
+    global loaded_embeddings
+    loaded_embeddings = True
 
-# Check if the Document is embedded ie. embeddings are loaded
-if not loaded_emebeddings:
+def load_vector_store():
+    global vector_store
+
+    # Creating the vector store from existing MongoDB collection
+    embeddings = OllamaEmbeddings(model='nomic-embed-text') 
+    vector_store = MongoDBAtlasVectorSearch(
+        embedding=embeddings,
+        collection=atlas_collection,
+        index_name=vector_search_index
+    )
+
+# Initializing a flag
+# Check if embeddings already exist in MongoDB
+if atlas_collection.count_documents({}) > 0:  
+    load_vector_store()
+    loaded_embeddings = True
+    print("Embeddings already loaded in MongoDB.")
+else:    
     load_embeddings()
+
+# Retrieval Mechanism
+# Creating a document chain
+doc_chain = create_stuff_documents_chain(llm = llm, prompt = Prompt, output_parser= StrOutputParser())
+
+# Defining the vector store as retriever
+retriever = vector_store.as_retriever( search_type = "similarity",
+search_kwargs = { "k": 10 })
+
+# Creating a retrieval chain
+retrieval_chain = create_retrieval_chain(retriever, doc_chain)
 
 # Define a route
 @app.post("/api")
