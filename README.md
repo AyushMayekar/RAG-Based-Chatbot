@@ -25,7 +25,7 @@ Welcome to the RAG-Based Document Chatbot repository! This project is an AI-powe
 2. **Install the dependencies**
 
    ```sh
-   pip install pakage-name
+   pip install -r requirements.txt
 3. **Run the application**
 
    ```sh
