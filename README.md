@@ -35,7 +35,6 @@ Welcome to the RAG-Based Document Chatbot repository! This project is an AI-powe
 
    ```sh
    streamlit run client.py
-
    
 ## Screenshots
 
